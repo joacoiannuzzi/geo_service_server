@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# not working, ports should be changed in the code
+for port in {50003..50004}; do
+  docker run --rm -d -p 50003:$port geo-service-server:0.1
+done
