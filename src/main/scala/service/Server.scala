@@ -6,7 +6,7 @@ import service.geoService.GeoServiceGrpc
 import scala.concurrent.ExecutionContext
 
 object Server extends App {
-  private val port = 50_003
+  private val port = 50_004
   private val builder = ServerBuilder
     .forPort(port)
   builder.addService(

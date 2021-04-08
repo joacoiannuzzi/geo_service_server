@@ -45,7 +45,6 @@ case class GeoService() extends GeoServiceGrpc.GeoService {
       request: GetLocationByIpRequest
   ): Future[GetLocationByIpReply] =
     Future {
-      Thread.sleep(1000)
       val ip = request.ip
       val (country, state) = cachedIp.getOrElse(
         ip, {

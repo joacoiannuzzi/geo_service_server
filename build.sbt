@@ -26,4 +26,4 @@ enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)
 
 mainClass in Compile := Some("service.Server")
-packageName in Docker := "geo-service-server"
+packageName in Docker := "geo-service-server2"
