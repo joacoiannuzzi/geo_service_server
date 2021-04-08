@@ -7,46 +7,45 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.io.Source
 
-case class GeoService() extends GeoServiceGrpc.GeoService {
+//case class GeoService() extends GeoServiceGrpc.GeoService {
+case class GeoService() {
 
   private val worldCities: List[CityEntry] = readCities()
 
   private val cachedIp: mutable.Map[String, (String, String)] = mutable.Map()
 
-  override def getCountries(
-      request: GetCountriesRequest
-  ): Future[GetCountriesReply] =
+   def getCountries: Future[GetCountriesReply] =
     Future {
       val countries = worldCities.map(_.country).distinct
       GetCountriesReply(countries)
     }
 
-  override def getStatesOfCountry(
-      request: GetStatesOfCountryRequest
+   def getStatesOfCountry(
+      aCountry: String
   ): Future[GetStatesOfCountryReply] =
     Future {
       val states =
-        worldCities.filter(_.country == request.country).map(_.state).distinct
+        worldCities.filter(_.country == aCountry).map(_.state).distinct
       GetStatesOfCountryReply(states)
     }
 
-  override def getCitiesOfState(
-      request: GetCitiesOfStateRequest
+   def getCitiesOfState(
+      aCountry: String,
+      aState: String
   ): Future[GetCitiesOfStateReply] =
     Future {
       val cities = worldCities
-        .filter(e => e.country == request.country && e.state == request.state)
+        .filter(e => e.country == aCountry && e.state == aState)
         .map(_.city)
         .distinct
       GetCitiesOfStateReply(cities)
     }
 
-  override def getLocationByIp(
-      request: GetLocationByIpRequest
+   def getLocationByIp(
+      ip: String
   ): Future[GetLocationByIpReply] =
     Future {
-      Thread.sleep(1000)
-      val ip = request.ip
+//      val ip = aIp
       val (country, state) = cachedIp.getOrElse(
         ip, {
           val url = s"http://ipwhois.app/json/$ip"
@@ -65,7 +64,7 @@ case class GeoService() extends GeoServiceGrpc.GeoService {
       GetLocationByIpReply(country, state)
     }
 
-  override def healthCheck(request: HealthCheckReq): Future[HealthCheckRes] = {
+   def healthCheck: Future[HealthCheckRes] = {
     println("healthCheck")
     Future.successful(HealthCheckRes())
   }

@@ -2,6 +2,7 @@ package service
 
 import io.grpc.ServerBuilder
 import service.geoService.GeoServiceGrpc
+import controller.GeoController
 
 import scala.concurrent.ExecutionContext
 
@@ -10,11 +11,12 @@ object Server extends App {
   private val builder = ServerBuilder
     .forPort(port)
   builder.addService(
-    GeoServiceGrpc.bindService(GeoService(), ExecutionContext.global)
+    GeoServiceGrpc.bindService(GeoController(), ExecutionContext.global)
   )
   private val server = builder.build()
 
   server.start()
   println(s"Listening on port $port")
   server.awaitTermination()
+
 }
