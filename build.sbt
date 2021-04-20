@@ -21,6 +21,7 @@ libraryDependencies ++= Seq(
 
 libraryDependencies += "com.lihaoyi" %% "upickle" % "0.9.5"
 libraryDependencies += "com.github.tototoshi" %% "scala-csv" % "1.3.7"
+libraryDependencies += "io.etcd" % "jetcd-core" % "0.5.4"
 
 enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)
