@@ -1,71 +1,154 @@
 package service
 import CityUtil.{CityEntry, readCities}
+import io.etcd.jetcd.{ByteSequence, Client}
+import io.grpc.ManagedChannelBuilder
+import scalacache.memcached._
+import scalacache.modes.try_.mode
+import scalacache.serialization.binary.anyRefBinaryCodec
+import scalacache.{Cache, caching}
+import service.geoService.GeoServiceGrpc.GeoServiceStub
 import service.geoService._
 
-import scala.collection.mutable
+import java.util.concurrent.TimeUnit
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.concurrent.duration.{Duration, DurationInt}
 import scala.io.Source
+import scala.language.postfixOps
 
-//case class GeoService() extends GeoServiceGrpc.GeoService {
-case class GeoService() {
+case class GeoService(port: Int, leaseId: Long)
+    extends GeoServiceGrpc.GeoService {
 
-  private val worldCities: List[CityEntry] = readCities()
+//  val electionClient = Client
+//    .builder()
+//    .endpoints("http://localhost:2379")
+//    .build()
+//    .getElectionClient
+//
+//  var isMaster = false
+//
+  val worldCities: List[CityEntry] = readCities()
+//
+//  Future {
+//    electionClient
+//      .campaign(
+//        ByteSequence.from("service/geo/election".getBytes()),
+//        leaseId,
+//        ByteSequence.from(port.toString.getBytes())
+//      )
+//      .thenAcceptAsync { _ =>
+//        isMaster = true
+//      }
+//  }
 
-  private val cachedIp: mutable.Map[String, (String, String)] = mutable.Map()
-
-   def getCountries: Future[GetCountriesReply] =
+  def getCountries(
+      getCountriesRequest: GetCountriesRequest
+  ): Future[GetCountriesReply] =
     Future {
       val countries = worldCities.map(_.country).distinct
       GetCountriesReply(countries)
     }
 
-   def getStatesOfCountry(
-      aCountry: String
+  def getStatesOfCountry(
+      getStatesOfCountryRequest: GetStatesOfCountryRequest
   ): Future[GetStatesOfCountryReply] =
     Future {
       val states =
-        worldCities.filter(_.country == aCountry).map(_.state).distinct
+        worldCities
+          .filter(_.country == getStatesOfCountryRequest.country)
+          .map(_.state)
+          .distinct
       GetStatesOfCountryReply(states)
     }
 
-   def getCitiesOfState(
-      aCountry: String,
-      aState: String
+  def getCitiesOfState(
+      getCitiesOfStateRequest: GetCitiesOfStateRequest
   ): Future[GetCitiesOfStateReply] =
     Future {
       val cities = worldCities
-        .filter(e => e.country == aCountry && e.state == aState)
+        .filter(e =>
+          e.country == getCitiesOfStateRequest.country && e.state == getCitiesOfStateRequest.state
+        )
         .map(_.city)
         .distinct
       GetCitiesOfStateReply(cities)
     }
 
-   def getLocationByIp(
-      ip: String
-  ): Future[GetLocationByIpReply] =
-    Future {
-//      val ip = aIp
-      val (country, state) = cachedIp.getOrElse(
-        ip, {
-          val url = s"http://ipwhois.app/json/$ip"
-          val source = Source.fromURL(url)
-          val str = source.mkString
-          source.close
-          val json = ujson.read(str)
-          val country = json("country").str
-          val state = json("region").str
-          val tuple = (country, state)
-          cachedIp.put(ip, tuple)
-          println(s"Cached IP: $ip with country $country and state $state")
-          tuple
-        }
-      )
-      GetLocationByIpReply(country, state)
-    }
+  case class CachedEntry(
+      country: String,
+      state: String
+  )
 
-   def healthCheck: Future[HealthCheckRes] = {
+  def getLocationByIp(
+      getLocationByIpRequest: GetLocationByIpRequest
+  ): Future[GetLocationByIpReply] = {
+
+//    Future {
+
+//    implicit val memcachedCache: Cache[CachedEntry] = MemcachedCache(
+//      "localhost:11211"
+//    )
+//    println("Enter function")
+    val ip = getLocationByIpRequest.ip
+
+//      if (get(ip).get.isDefined || isMaster) {
+//    val CachedEntry(country, state) =
+//      caching(ip)(ttl = Option(Duration(15.toLong, TimeUnit.SECONDS))) {
+//        println("ENTER HERE")
+
+    val url = s"http://ipwhois.app/json/$ip"
+    val source = Source.fromURL(url)
+    println("Before json read")
+    val json = ujson.read(source.mkString)
+    println("Before close")
+    source.close
+    val country = json("country").str
+    val state = json("region").str
+
+//    println(s"Cached IP: $ip with country $country and state $state")
+
+//    CachedEntry(country, state)
+//      }.get
+//    println("OUTSIDE")
+    Future.successful(
+      GetLocationByIpReply(country, state)
+    )
+//      } else {
+//        println("searching master")
+//        val masterPort = electionClient
+//          .leader(
+//            ByteSequence.from("service/geo/election".getBytes())
+//          )
+//          .get
+//          .getKv
+//          .getValue
+//          .toString(Charset.defaultCharset())
+//          .toInt
+//
+//        println(s"masterPort $masterPort")
+//
+//        val future = createStub("localhost", masterPort).getLocationByIp(
+//          getLocationByIpRequest
+//        )
+//        Await.result(future, 2 seconds)
+
+//      }
+//    }
+  }
+
+  def healthCheck(healthCheckReq: HealthCheckReq): Future[HealthCheckRes] = {
     println("healthCheck")
     Future.successful(HealthCheckRes())
+  }
+
+}
+
+object StubUtil {
+
+  def createStub(ip: String, port: Int): GeoServiceStub = {
+    val builder = ManagedChannelBuilder.forAddress(ip, port)
+    builder.usePlaintext()
+    val channel = builder.build()
+    GeoServiceGrpc.stub(channel)
   }
 }

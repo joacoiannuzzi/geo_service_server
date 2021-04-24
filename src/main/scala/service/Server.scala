@@ -1,29 +1,20 @@
 package service
 
-import controller.GeoController
 import io.etcd.jetcd.lease.LeaseKeepAliveResponse
 import io.etcd.jetcd.options.PutOption
 import io.etcd.jetcd.{ByteSequence, Client, KV}
 import io.grpc.ServerBuilder
 import io.grpc.stub.StreamObserver
 import service.geoService.GeoServiceGrpc
-import sun.nio.cs.UTF_8
 
 import java.net.InetAddress
 import java.nio.charset.Charset
 import scala.concurrent.ExecutionContext
+import scala.jdk.CollectionConverters.ListHasAsScala
 import scala.util.Random
 
 object Server extends App {
-  private val port = 50_005
-  private val builder = ServerBuilder
-    .forPort(port)
-  builder.addService(
-    GeoServiceGrpc.bindService(GeoController(), ExecutionContext.global)
-  )
-  private val server = builder.build()
-
-  server.start()
+  private val port = 50_003
 
   val client: Client =
     Client.builder().endpoints("http://127.0.0.1:2379").build()
@@ -41,10 +32,14 @@ object Server extends App {
     )
     .get()
     .getKvs
-    .get(0)
-    .getValue
-    .toString(Charset.defaultCharset())
-    .toLong
+    .asScala
+    .headOption
+    .map { o =>
+      o.getValue
+        .toString(Charset.defaultCharset())
+        .toLong
+    }
+    .getOrElse(2L)
 
   val leaseClient = client.getLeaseClient
   val leaseId = leaseClient.grant(ttl).get.getID
@@ -69,6 +64,18 @@ object Server extends App {
   kvClient
     .put(key, value, PutOption.newBuilder().withLeaseId(leaseId).build())
     .get()
+
+  private val builder = ServerBuilder
+    .forPort(port)
+  builder.addService(
+    GeoServiceGrpc.bindService(
+      GeoService(port, leaseId),
+      ExecutionContext.global
+    )
+  )
+  private val server = builder.build()
+
+  server.start()
 
   println(s"Listening on port $port")
   server.awaitTermination()

@@ -22,6 +22,7 @@ libraryDependencies ++= Seq(
 libraryDependencies += "com.lihaoyi" %% "upickle" % "0.9.5"
 libraryDependencies += "com.github.tototoshi" %% "scala-csv" % "1.3.7"
 libraryDependencies += "io.etcd" % "jetcd-core" % "0.5.4"
+libraryDependencies += "com.github.cb372" %% "scalacache-memcached" % "0.28.0"
 
 enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)
