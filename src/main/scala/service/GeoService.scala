@@ -112,9 +112,7 @@ case class GeoService(port: Int, leaseId: Long)
             CachedEntry(country, state)
           }.get
         println("OUTSIDE")
-        Future.successful(
-          GetLocationByIpReply(country, state)
-        )
+        GetLocationByIpReply(country, state)
       } else {
         println("searching master")
         val masterPort = electionClient
