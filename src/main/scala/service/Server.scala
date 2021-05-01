@@ -9,19 +9,22 @@ import service.geoService.GeoServiceGrpc
 
 import java.net.InetAddress
 import java.nio.charset.Charset
+import java.util.concurrent.{ScheduledThreadPoolExecutor, TimeUnit}
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.ListHasAsScala
 import scala.util.Random
 
 object Server extends App {
-  private val port = 50_003
+  private val port = 50_004
+
+  val randomKey: String = Random.nextString(5)
+  val localhost: String = InetAddress.getLocalHost.getHostAddress
+
+  private val url = s"$localhost:$port"
 
   val client: Client =
     Client.builder().endpoints("http://127.0.0.1:2379").build()
   val kvClient: KV = client.getKVClient
-
-  val randomKey: String = Random.nextString(5)
-  val localhost: String = InetAddress.getLocalHost.getHostAddress
 
   val ttl = kvClient
     .get(
@@ -39,27 +42,46 @@ object Server extends App {
         .toString(Charset.defaultCharset())
         .toLong
     }
-    .getOrElse(2L)
+    .getOrElse(5L)
+
+  val keepAliveTime = kvClient
+    .get(
+      ByteSequence.from(
+        "config/services/geo/lease/keepAliveTime",
+        Charset.defaultCharset()
+      )
+    )
+    .get()
+    .getKvs
+    .asScala
+    .headOption
+    .map { o =>
+      o.getValue
+        .toString(Charset.defaultCharset())
+        .toLong
+    }
+    .getOrElse(4L)
 
   val leaseClient = client.getLeaseClient
+
   val leaseId = leaseClient.grant(ttl).get.getID
+  println("leaseId " + leaseId)
 
-//  leaseClient.timeToLive()
-
-  leaseClient.keepAlive(
-    leaseId,
-    new StreamObserver[LeaseKeepAliveResponse] {
-      override def onNext(value: LeaseKeepAliveResponse): Unit = {}
-
-      override def onError(t: Throwable): Unit = {}
-
-      override def onCompleted(): Unit = {}
+  val ex = new ScheduledThreadPoolExecutor(1)
+  val task = new Runnable {
+    def run() = {
+      leaseClient.keepAliveOnce(leaseId)
+//      println("Renewed lease")
     }
-  )
+  }
+  val f =
+    ex.scheduleAtFixedRate(task, keepAliveTime, keepAliveTime, TimeUnit.SECONDS)
+//  f.cancel(false)
 
   val key: ByteSequence =
     ByteSequence.from(s"service/geo/$randomKey".getBytes())
-  val value: ByteSequence = ByteSequence.from(s"$localhost:$port".getBytes())
+
+  val value: ByteSequence = ByteSequence.from(url.getBytes())
 
   kvClient
     .put(key, value, PutOption.newBuilder().withLeaseId(leaseId).build())
@@ -69,7 +91,7 @@ object Server extends App {
     .forPort(port)
   builder.addService(
     GeoServiceGrpc.bindService(
-      GeoService(port, leaseId),
+      GeoService(url, leaseId),
       ExecutionContext.global
     )
   )
@@ -77,7 +99,6 @@ object Server extends App {
 
   server.start()
 
-  println(s"Listening on port $port")
+  println(s"Listening on $url")
   server.awaitTermination()
-
 }

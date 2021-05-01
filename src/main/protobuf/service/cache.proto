@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package service ;
+
+
+message CachedEntry {
+  string country = 1;
+  string state   = 2;
+}

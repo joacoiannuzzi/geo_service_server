@@ -29,3 +29,7 @@ enablePlugins(DockerPlugin)
 
 mainClass in Compile := Some("service.Server")
 packageName in Docker := "geo-service-server-50003"
+
+resolvers ++= Seq(
+  "jitpack" at "https://jitpack.io/"
+)
