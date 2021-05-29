@@ -1,5 +1,6 @@
 package service
 
+import com.google.common.base.Charsets.UTF_8
 import io.etcd.jetcd.lease.LeaseKeepAliveResponse
 import io.etcd.jetcd.options.PutOption
 import io.etcd.jetcd.{ByteSequence, Client, KV}

@@ -21,27 +21,27 @@ import scala.language.postfixOps
 case class GeoService(port: Int, leaseId: Long)
     extends GeoServiceGrpc.GeoService {
 
-  val electionClient = Client
-    .builder()
-    .endpoints("http://localhost:2379")
-    .build()
-    .getElectionClient
+//  val electionClient = Client
+//    .builder()
+//    .endpoints("http://localhost:2379")
+//    .build()
+//    .getElectionClient
 
-  var isMaster = false
+//  var isMaster = false
 
   val worldCities: List[CityEntry] = readCities()
 
-  Future {
-    electionClient
-      .campaign(
-        ByteSequence.from("service/geo/election".getBytes()),
-        leaseId,
-        ByteSequence.from(port.toString.getBytes())
-      )
-      .thenAcceptAsync { _ =>
-        isMaster = true
-      }
-  }
+//  Future {
+//    electionClient
+//      .campaign(
+//        ByteSequence.from("service/geo/election".getBytes()),
+//        leaseId,
+//        ByteSequence.from(port.toString.getBytes())
+//      )
+//      .thenAcceptAsync { _ =>
+//        isMaster = true
+//      }
+//  }
 
   def getCountries(
       getCountriesRequest: GetCountriesRequest
@@ -90,19 +90,19 @@ case class GeoService(port: Int, leaseId: Long)
       implicit val memcachedCache: Cache[CachedEntry] = MemcachedCache(
         "localhost:11211"
       )
-      println("Enter function")
+//      println("Enter function")
       val ip = getLocationByIpRequest.ip
 
-      if (get(ip).get.isDefined || isMaster) {
+//      if (get(ip).get.isDefined || isMaster) {
         val CachedEntry(country, state) =
-          caching(ip)(ttl = Option(Duration(15.toLong, TimeUnit.SECONDS))) {
-            println("ENTER HERE")
+          caching(ip)(ttl = Option(Duration(30.toLong, TimeUnit.SECONDS))) {
+//            println("ENTER HERE")
 
             val url = s"http://ipwhois.app/json/$ip"
             val source = Source.fromURL(url)
-            println("Before json read")
+//            println("Before json read")
             val json = ujson.read(source.mkString)
-            println("Before close")
+//            println("Before close")
             source.close
             val country = json("country").str
             val state = json("region").str
@@ -111,30 +111,30 @@ case class GeoService(port: Int, leaseId: Long)
 
             CachedEntry(country, state)
           }.get
-        println("OUTSIDE")
+//        println("OUTSIDE")
         Future.successful(
           GetLocationByIpReply(country, state)
         )
-      } else {
-        println("searching master")
-        val masterPort = electionClient
-          .leader(
-            ByteSequence.from("service/geo/election".getBytes())
-          )
-          .get
-          .getKv
-          .getValue
-          .toString(Charset.defaultCharset())
-          .toInt
-
-        println(s"masterPort $masterPort")
-
-        val future = createStub("localhost", masterPort).getLocationByIp(
-          getLocationByIpRequest
-        )
-        Await.result(future, 2 seconds)
-
-      }
+//      } else {
+//        println("searching master")
+//        val masterPort = electionClient
+//          .leader(
+//            ByteSequence.from("service/geo/election".getBytes())
+//          )
+//          .get
+//          .getKv
+//          .getValue
+//          .toString(Charset.defaultCharset())
+//          .toInt
+//
+//        println(s"masterPort $masterPort")
+//
+//        val future = createStub("localhost", masterPort).getLocationByIp(
+//          getLocationByIpRequest
+//        )
+//        Await.result(future, 2 seconds)
+//
+//      }
     }
   }
 
