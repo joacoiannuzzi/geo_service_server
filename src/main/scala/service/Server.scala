@@ -17,8 +17,7 @@ import scala.util.Random
 
 object Server extends App {
   private val port = 50_004
-
-  val randomKey: String = Random.nextString(5)
+  val randomKey: String = Random.alphanumeric.take(10).mkString("")
   val localhost: String = InetAddress.getLocalHost.getHostAddress
 
   private val url = s"$localhost:$port"
