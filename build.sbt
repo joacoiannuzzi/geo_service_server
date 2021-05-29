@@ -5,7 +5,7 @@ version := "0.1"
 scalaVersion := "2.13.5"
 
 libraryDependencies ++= Seq(
-  "io.grpc" % "grpc-netty" % scalapb.compiler.Version.grpcJavaVersion,
+  "io.grpc" % "grpc-netty" % "1.4.0",
   "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
 )
 
@@ -21,9 +21,12 @@ libraryDependencies ++= Seq(
 
 libraryDependencies += "com.lihaoyi" %% "upickle" % "0.9.5"
 libraryDependencies += "com.github.tototoshi" %% "scala-csv" % "1.3.7"
+libraryDependencies += "io.etcd" % "jetcd-core" % "0.5.4"
+libraryDependencies += "com.github.cb372" %% "scalacache-memcached" % "0.28.0"
+
 
 enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)
 
 mainClass in Compile := Some("service.Server")
-packageName in Docker := "geo-service-server2"
+packageName in Docker := "geo-service-server-50003"
