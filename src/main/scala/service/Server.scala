@@ -6,6 +6,7 @@ import io.etcd.jetcd.options.PutOption
 import io.etcd.jetcd.{ByteSequence, Client, KV}
 import io.grpc.ServerBuilder
 import io.grpc.stub.StreamObserver
+import service.Utils.getEtcdClient
 import service.geoService.GeoServiceGrpc
 
 import java.net.InetAddress
@@ -15,6 +16,15 @@ import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.ListHasAsScala
 import scala.util.Random
 
+object Utils {
+  private val endpoint: String = sys.env("ETCD_ENDPOINT")
+
+  def getEtcdClient: Client = {
+    println(s"endpoint $endpoint")
+    Client.builder().endpoints(endpoint).build()
+  }
+}
+
 object Server extends App {
   private val port = 50_004
   val randomKey: String = Random.alphanumeric.take(10).mkString("")
@@ -22,8 +32,7 @@ object Server extends App {
 
   private val url = s"$localhost:$port"
 
-  val client: Client =
-    Client.builder().endpoints("http://127.0.0.1:2379").build()
+  val client: Client = getEtcdClient
   val kvClient: KV = client.getKVClient
 
   val ttl = kvClient
@@ -83,10 +92,6 @@ object Server extends App {
 
   val value: ByteSequence = ByteSequence.from(url.getBytes())
 
-  kvClient
-    .put(key, value, PutOption.newBuilder().withLeaseId(leaseId).build())
-    .get()
-
   private val builder = ServerBuilder
     .forPort(port)
   builder.addService(
@@ -100,5 +105,10 @@ object Server extends App {
   server.start()
 
   println(s"Listening on $url")
+
+  kvClient
+    .put(key, value, PutOption.newBuilder().withLeaseId(leaseId).build())
+    .get()
+
   server.awaitTermination()
 }

@@ -1,0 +1,75 @@
+version: "3.9"
+
+# Run 'docker compose up' to start all containers
+
+# Default Network
+networks:
+  app-network:
+    driver: bridge
+
+services:
+
+  # ETCD Server
+  etcd:
+    container_name: etcd
+    image: 'bitnami/etcd:3.4.15'
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+    ports:
+      - 2379:2379
+      - 2380:2380
+    networks:
+      - app-network
+
+  # Memcached Server
+  memcached:
+    container_name: memcached
+    image: 'bitnami/memcached:1.6.9'
+    networks:
+      - app-network
+
+  # Run 'sbt docker:publishLocal' to generate these images
+
+  geoservice1:
+    image: geo-service-server:0.1
+#    entrypoint: '/opt/docker/bin/hello-world-server'
+    environment:
+      ETCD_ENDPOINT: http://etcd:2379
+      MEMCACHED_ENDPOINT: memcached:11211
+    depends_on:
+      - etcd
+      - memcached
+    networks:
+      - app-network
+
+  geoservice2:
+    image: geo-service-server:0.1
+#    entrypoint: '/opt/docker/bin/hello-world-server'
+    environment:
+      ETCD_ENDPOINT: http://etcd:2379
+      MEMCACHED_ENDPOINT: memcached:11211
+    depends_on:
+      - etcd
+      - memcached
+    networks:
+      - app-network
+
+#  client:
+#    image: 'scalapb-demo:0.1.0-SNAPSHOT'
+#    entrypoint: '/opt/docker/bin/client-demo'
+#    depends_on:
+#      - etcd
+#      - helloserver1
+#      - helloserver2
+#    networks:
+#      - app-network
+#
+#  etcd-demo:
+#    image: 'scalapb-demo:0.1.0-SNAPSHOT'
+#    entrypoint: '/opt/docker/bin/etcd-demo'
+#    depends_on:
+#      - etcd
+#      - memcached
+#    networks:
+#      - app-network

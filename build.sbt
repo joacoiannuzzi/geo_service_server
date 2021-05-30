@@ -24,12 +24,11 @@ libraryDependencies += "com.github.tototoshi" %% "scala-csv" % "1.3.7"
 libraryDependencies += "io.etcd" % "jetcd-core" % "0.5.4"
 libraryDependencies += "com.github.cb372" %% "scalacache-memcached" % "0.28.0"
 
-
 enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)
 
 mainClass in Compile := Some("service.Server")
-packageName in Docker := "geo-service-server-50003"
+packageName in Docker := "geo-service-server"
 
 resolvers ++= Seq(
   "jitpack" at "https://jitpack.io/"

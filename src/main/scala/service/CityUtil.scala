@@ -6,7 +6,7 @@ package object CityUtil {
   def readCities(): List[CityEntry] = {
     CSVReader
       .open(
-        "./src/main/resources/world-cities_csv.csv"
+        "./world-cities_csv.csv"
       )
       .allWithHeaders
       .map(_.toList)

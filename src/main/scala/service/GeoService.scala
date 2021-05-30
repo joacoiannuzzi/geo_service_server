@@ -9,6 +9,7 @@ import service.StubUtil.createStub
 import service.geoService.GeoServiceGrpc.GeoServiceStub
 import service.geoService._
 import scalacache.serialization.binary._
+import service.Utils.getEtcdClient
 import service.cache.CachedEntry
 
 import java.nio.charset.Charset
@@ -30,10 +31,7 @@ case class GeoService(url: String, leaseId: Long)
 
   val worldCities: List[CityEntry] = readCities()
 
-  private val client: Client = Client
-    .builder()
-    .endpoints("http://localhost:2379")
-    .build
+  private val client: Client = getEtcdClient
 
   val kvClient = client.getKVClient
 
@@ -44,12 +42,14 @@ case class GeoService(url: String, leaseId: Long)
   Future {
     electionClient
       .campaign(
-        ByteSequence.from("service/geo/election".getBytes()),
+        ByteSequence.from("election/service/geo".getBytes()),
         leaseId,
         ByteSequence.from(url.getBytes)
       )
       .thenRun { () =>
         isMaster = true
+        println("I AM MASTER")
+
       }
   }
 
@@ -111,6 +111,7 @@ case class GeoService(url: String, leaseId: Long)
         }
         .getOrElse(5L)
 
+      val memEndpoint = sys.env("MEMCACHED_ENDPOINT")
       val cacheUrl = kvClient
         .get(
           ByteSequence.from(
@@ -126,13 +127,16 @@ case class GeoService(url: String, leaseId: Long)
           o.getValue
             .toString(Charset.defaultCharset())
         }
-        .getOrElse("localhost:11211")
+        .getOrElse(memEndpoint)
 
       implicit val memcachedCache: Cache[Array[Byte]] = MemcachedCache(
         cacheUrl
       )
 
-      if (get(ip).get.isDefined || isMaster) {
+      println("after memcached")
+
+      if (isMaster || get(ip).get.isDefined) {
+        println("entered master")
         val bytes =
           caching(ip)(ttl = Option(Duration(cacheTtl, TimeUnit.SECONDS))) {
 
@@ -154,7 +158,7 @@ case class GeoService(url: String, leaseId: Long)
 
         val Array(masterIp, masterPort) = electionClient
           .leader(
-            ByteSequence.from("service/geo/election".getBytes())
+            ByteSequence.from("election/service/geo".getBytes())
           )
           .get
           .getKv
